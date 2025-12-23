@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenVPN Admin Panel
+After=network.target openvpn-server@server.service
+Wants=openvpn-server@server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/openvpn-admin
+Environment="PATH=/opt/openvpn-admin/venv/bin"
+EnvironmentFile=/opt/openvpn-admin/.env
+ExecStart=/opt/openvpn-admin/venv/bin/python /opt/openvpn-admin/app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
