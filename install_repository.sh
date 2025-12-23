@@ -133,6 +133,9 @@ fi
 # Get server IP
 SERVER_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -1)
 
+# Make update script executable
+chmod +x $INSTALL_DIR/update.sh
+
 echo ""
 echo -e "${GREEN}=====================================${NC}"
 echo -e "${GREEN}Installation Complete!${NC}"
@@ -145,6 +148,7 @@ echo ""
 echo -e "${RED}IMPORTANT: Save these credentials!${NC}"
 echo ""
 echo -e "${YELLOW}To change password, edit:${NC} $INSTALL_DIR/.env"
+echo -e "${YELLOW}To check for updates:${NC} sudo $INSTALL_DIR/update.sh"
 echo -e "${YELLOW}Service commands:${NC}"
 echo "  systemctl status openvpn-admin"
 echo "  systemctl restart openvpn-admin"

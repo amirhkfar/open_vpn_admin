@@ -8,14 +8,33 @@ A lightweight, web-based administration panel for managing OpenVPN clients. Comp
 
 ## ✨ Features
 
-- 📊 **Dashboard** - Overview of all VPN clients and server status
-- ➕ **Add Clients** - Create new VPN clients with one click
-- 🚫 **Revoke Clients** - Revoke client certificates instantly
-- 📥 **Download Configs** - Download `.ovpn` configuration files
-- 🟢 **Live Monitoring** - See which clients are currently connected
-- 📈 **Statistics** - Track total, active, revoked, and connected clients
-- 🔒 **Secure** - HTTP Basic Authentication
-- 🎨 **Modern UI** - Clean, responsive interface
+### 📊 Dashboard & Monitoring
+- **Real-time Statistics** - Total clients, connected users, upload/download speeds
+- **Server Information** - Monitor server status, IP, port, and protocol
+- **Live Connection Tracking** - See which clients are online with IP addresses
+- **Bandwidth Monitoring** - Track data usage per client (Upload/Download in B/KB/MB/GB/TB)
+- **Auto-refresh** - Dashboard updates every 30 seconds
+
+### 👥 Client Management
+- **Add Clients** - Create new VPN clients with custom expiry dates
+- **Edit Clients** - Modify existing client settings (multi-connection support)
+- **Extend Expiry** - Renew certificate expiration for existing clients
+- **Revoke Clients** - Disable client certificates instantly
+- **Full Delete** - Completely remove clients and all their files
+- **Multi-Connection Control** - Enable/disable duplicate connections per client
+
+### 📥 Configuration Export
+- **Download Configs** - Download `.ovpn` configuration files
+- **Base64 Export** - Get client config as base64 encoded string
+- **Inline Configurations** - All certificates embedded in config files
+
+### 🎨 Modern Interface
+- **3x-ui Inspired Design** - Clean, dark sidebar navigation
+- **Inter Font** - Professional typography throughout
+- **Purple Gradient Theme** - Beautiful color scheme (#667eea → #764ba2)
+- **Responsive Layout** - Works on desktop, tablet, and mobile
+- **Session-based Authentication** - Secure login with 24-hour sessions
+- **Action Dropdown Menus** - Clean, organized client actions
 
 ## 📋 Requirements
 
@@ -35,9 +54,15 @@ sudo bash openvpn-install.sh
 
 ### 2. Install OpenVPN Admin Panel
 
+#### One-Line Installation (Recommended)
 ```bash
-# Clone or download this repository
-git clone <your-repo-url> openvpn-admin
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/install_repository.sh | sudo bash
+```
+
+#### Or Manual Clone and Install
+```bash
+# Clone the repository
+git clone https://github.com/amirhkfar/open_vpn_admin.git openvpn-admin
 cd openvpn-admin
 
 # Run the installation script
@@ -61,7 +86,35 @@ http://YOUR_SERVER_IP:5000
 
 Default credentials will be displayed after installation. You can find them in `/opt/openvpn-admin/.env`
 
-## 🔧 Manual Installation
+## � Updating
+
+### Automatic Update
+
+Check for updates and install automatically:
+
+```bash
+sudo /opt/openvpn-admin/update.sh
+```
+
+The update script will:
+- ✓ Check for new versions on GitHub
+- ✓ Create automatic backup before updating
+- ✓ Preserve your settings (.env file)
+- ✓ Preserve bandwidth statistics
+- ✓ Update dependencies
+- ✓ Restart the service
+
+### Manual Update
+
+```bash
+cd /opt/openvpn-admin
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart openvpn-admin
+```
+
+## �🔧 Manual Installation
 
 If you prefer manual installation:
 

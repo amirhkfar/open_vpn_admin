@@ -5,6 +5,7 @@ import os
 from datetime import datetime, timedelta
 from functools import wraps
 import secrets
+import json
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -17,6 +18,7 @@ EASYRSA_DIR = '/etc/openvpn/server/easy-rsa'
 OPENVPN_DIR = '/etc/openvpn/server'
 CLIENT_CONFIG_DIR = '/root'
 STATUS_LOG = '/var/log/openvpn/status.log'
+STATS_FILE = '/opt/openvpn-admin/client_stats.json'
 
 def login_required(f):
     @wraps(f)
@@ -91,30 +93,22 @@ def get_connected_clients():
     
     try:
         with open(STATUS_LOG, 'r') as f:
-            content = f.read()
-            
-        lines = content.split('\n')
-        in_client_list = False
-        in_routing_table = False
+            lines = f.readlines()
         
         for line in lines:
-            if line.startswith('OpenVPN CLIENT LIST'):
-                in_client_list = True
-                continue
-            elif line.startswith('ROUTING TABLE'):
-                in_client_list = False
-                in_routing_table = True
-                continue
-            elif line.startswith('GLOBAL STATS'):
-                break
-            
-            if in_client_list and line.startswith('CLIENT_LIST'):
-                parts = line.split(',')
-                if len(parts) >= 8:
+            # Parse CLIENT_LIST entries - skip header line
+            if line.startswith('CLIENT_LIST,') and 'Common Name' not in line:
+                parts = line.strip().split(',')
+                if len(parts) >= 13:  # Full CLIENT_LIST has 13 fields
                     client_name = parts[1]
+                    
+                    # Skip UNDEF clients
+                    if client_name == 'UNDEF' or not client_name:
+                        continue
+                    
                     real_address = parts[2]
-                    bytes_received = parts[4]  # bytes from client
-                    bytes_sent = parts[5]      # bytes to client
+                    bytes_received = parts[5]
+                    bytes_sent = parts[6]
                     connected_since = parts[7]
                     
                     connected[client_name] = {
@@ -124,23 +118,62 @@ def get_connected_clients():
                         'bytes_sent': int(bytes_sent) if bytes_sent.isdigit() else 0,
                         'connected_since': connected_since
                     }
-            
-            elif in_routing_table and line.startswith('ROUTING_TABLE'):
-                parts = line.split(',')
-                if len(parts) >= 4:
-                    client_name = parts[2]
-                    if client_name not in connected:
-                        connected[client_name] = {
-                            'connected': True,
-                            'ip': '',
-                            'bytes_received': 0,
-                            'bytes_sent': 0
-                        }
     
     except Exception as e:
         print(f"Error reading status log: {e}")
+        import traceback
+        traceback.print_exc()
     
     return connected
+
+def load_client_stats():
+    """Load cumulative client statistics from file"""
+    if os.path.exists(STATS_FILE):
+        try:
+            with open(STATS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_client_stats(stats):
+    """Save cumulative client statistics to file"""
+    try:
+        with open(STATS_FILE, 'w') as f:
+            json.dump(stats, f, indent=2)
+    except Exception as e:
+        print(f"Error saving stats: {e}")
+
+def update_cumulative_stats():
+    """Update cumulative statistics with current session data"""
+    cumulative = load_client_stats()
+    connected = get_connected_clients()
+    
+    for client_name, conn_info in connected.items():
+        if client_name not in cumulative:
+            cumulative[client_name] = {
+                'total_sent': 0,
+                'total_received': 0,
+                'last_sent': 0,
+                'last_received': 0
+            }
+        
+        current_sent = conn_info.get('bytes_sent', 0)
+        current_received = conn_info.get('bytes_received', 0)
+        
+        # If current session values are less than last recorded, it's a new session
+        # Add the previous session's data to cumulative
+        if current_sent < cumulative[client_name]['last_sent']:
+            cumulative[client_name]['total_sent'] += cumulative[client_name]['last_sent']
+        if current_received < cumulative[client_name]['last_received']:
+            cumulative[client_name]['total_received'] += cumulative[client_name]['last_received']
+        
+        # Update last recorded values
+        cumulative[client_name]['last_sent'] = current_sent
+        cumulative[client_name]['last_received'] = current_received
+    
+    save_client_stats(cumulative)
+    return cumulative
 
 def get_server_stats():
     """Get overall server statistics"""
@@ -160,6 +193,25 @@ def get_server_stats():
     stdout, _, _ = run_command('systemctl is-active openvpn-server@server')
     server_running = stdout.strip() == 'active'
     
+    # Get server IP
+    stdout, _, _ = run_command('hostname -I')
+    server_ip = stdout.strip().split()[0] if stdout.strip() else 'Unknown'
+    
+    # Get server port and protocol from config
+    server_port = 'Unknown'
+    server_protocol = 'Unknown'
+    config_file = '/etc/openvpn/server/server.conf'
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as f:
+                for line in f:
+                    if line.startswith('port '):
+                        server_port = line.split()[1].strip()
+                    elif line.startswith('proto '):
+                        server_protocol = line.split()[1].strip().upper()
+        except:
+            pass
+    
     return {
         'total_clients': total,
         'active_clients': active,
@@ -169,7 +221,10 @@ def get_server_stats():
         'total_sent': total_sent,
         'total_received': total_received,
         'total_sent_formatted': format_bytes(total_sent),
-        'total_received_formatted': format_bytes(total_received)
+        'total_received_formatted': format_bytes(total_received),
+        'server_ip': server_ip,
+        'server_port': server_port,
+        'protocol': server_protocol
     }
 
 # Routes
@@ -202,20 +257,59 @@ def dashboard():
 @app.route('/clients')
 @login_required
 def clients_page():
+    # Update cumulative stats first
+    cumulative_stats = update_cumulative_stats()
+    
     clients = get_clients()
     connected_clients = get_connected_clients()
+    
+    # Calculate totals
+    total_cumulative_sent = 0
+    total_cumulative_received = 0
     
     # Merge client data with connection info
     for client in clients:
         conn_info = connected_clients.get(client['name'], {})
         client['connected'] = conn_info.get('connected', False)
-        client['ip'] = conn_info.get('ip', '')
-        client['bytes_sent'] = conn_info.get('bytes_sent', 0)
-        client['bytes_received'] = conn_info.get('bytes_received', 0)
-        client['bytes_sent_formatted'] = format_bytes(conn_info.get('bytes_sent', 0))
-        client['bytes_received_formatted'] = format_bytes(conn_info.get('bytes_received', 0))
+        client['real_address'] = conn_info.get('ip', '')
+        
+        # Current session data (only for connected clients)
+        current_sent = conn_info.get('bytes_sent', 0) if client['connected'] else 0
+        current_received = conn_info.get('bytes_received', 0) if client['connected'] else 0
+        
+        # Get cumulative data from stats file
+        client_cumulative = cumulative_stats.get(client['name'], {})
+        # Add current session to the stored cumulative
+        cumulative_sent = client_cumulative.get('total_sent', 0) + client_cumulative.get('last_sent', 0)
+        cumulative_received = client_cumulative.get('total_received', 0) + client_cumulative.get('last_received', 0)
+        
+        # Store both current and cumulative
+        client['bytes_sent'] = format_bytes(current_sent) if client['connected'] else '-'
+        client['bytes_received'] = format_bytes(current_received) if client['connected'] else '-'
+        client['cumulative_sent'] = format_bytes(cumulative_sent)
+        client['cumulative_received'] = format_bytes(cumulative_received)
+        
+        # Add to totals
+        total_cumulative_sent += cumulative_sent
+        total_cumulative_received += cumulative_received
+        
+        client['expiry_date'] = client.get('expiry', 'N/A')
+        
+        # Check if client has duplicate-cn enabled
+        config_file = f"{CLIENT_CONFIG_DIR}/{client['name']}.ovpn"
+        client['allow_multi_connection'] = False
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    content = f.read()
+                    client['allow_multi_connection'] = 'duplicate-cn' in content
+            except:
+                pass
     
-    return render_template('clients.html', clients=clients)
+    return render_template('clients.html', 
+                         clients=clients,
+                         total_cumulative_sent=format_bytes(total_cumulative_sent),
+                         total_cumulative_received=format_bytes(total_cumulative_received))
 
 # API Routes
 @app.route('/api/stats')

@@ -16,3 +16,8 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Backup files
+*_old.*
+*.bak
+*.backup
