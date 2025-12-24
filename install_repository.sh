@@ -93,7 +93,7 @@ echo "OpenVPN-CA" | ./easyrsa build-ca nopass
 
 # Generate server certificate and key
 ./easyrsa gen-req server nopass
-echo "yes" | ./easyrsa sign-req server server
+EASYRSA_BATCH=1 ./easyrsa sign-req server server
 
 # Generate DH parameters
 ./easyrsa gen-dh
