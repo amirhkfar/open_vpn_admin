@@ -19,6 +19,18 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+# Check if stdin is a terminal (not piped from curl)
+if [ ! -t 0 ]; then
+    echo -e "${YELLOW}Detected non-interactive mode (piped from curl).${NC}"
+    echo -e "${YELLOW}Downloading script for interactive use...${NC}"
+    TEMP_SCRIPT="/tmp/openvpn-manage-$$.sh"
+    curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh -o "$TEMP_SCRIPT"
+    chmod +x "$TEMP_SCRIPT"
+    echo -e "${GREEN}Starting interactive menu...${NC}"
+    exec bash "$TEMP_SCRIPT" "$@"
+    exit 0
+fi
+
 show_menu() {
     clear
     echo -e "${CYAN}=====================================${NC}"
@@ -136,7 +148,7 @@ uninstall_panel() {
 
 reinstall_panel() {
     echo -e "${YELLOW}This will completely remove and reinstall the admin panel.${NC}"
-    read -r -p "Continue? (yes/no): " REPLY < /dev/tty
+    read -r -p "Continue? (yes/no): " REPLY
     echo
     if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
         echo -e "${YELLOW}Reinstall cancelled.${NC}"
@@ -153,7 +165,7 @@ reinstall_panel() {
 # Main loop
 while true; do
     show_menu
-    read -r -p "Please select an option [1-9]: " choice < /dev/tty
+    read -r -p "Please select an option [1-9]: " choice
     echo ""
     
     case $choice in
@@ -191,5 +203,5 @@ while true; do
     esac
     
     echo ""
-    read -r -p "Press Enter to continue..." < /dev/tty
+    read -r -p "Press Enter to continue..."
 done

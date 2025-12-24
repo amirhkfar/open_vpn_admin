@@ -32,7 +32,7 @@ echo -e "${RED}WARNING: This will NOT remove OpenVPN server or its configuration
 echo -e "${YELLOW}To also remove OpenVPN server, run the OpenVPN uninstaller separately.${NC}"
 echo ""
 
-read -r -p "Are you sure you want to uninstall? (yes/no): " REPLY < /dev/tty
+read -r -p "Are you sure you want to uninstall? (yes/no): " REPLY
 echo
 if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
     echo -e "${YELLOW}Uninstall cancelled.${NC}"
