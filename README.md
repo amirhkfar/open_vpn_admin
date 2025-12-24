@@ -84,9 +84,43 @@ Open your browser and navigate to:
 http://YOUR_SERVER_IP:5000
 ```
 
-Default credentials will be displayed after installation. You can find them in `/opt/openvpn-admin/.env`
+Default credentials will be displayed after installation. You can also view them anytime:
+```bash
+sudo cat /root/.openvpn-admin-credentials
+```
 
-## � Updating
+## 🛠️ Management
+
+### Interactive Management Menu
+
+Use the management script for easy control:
+
+```bash
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash
+```
+
+Or if you cloned the repository:
+```bash
+sudo bash manage.sh
+```
+
+The management menu provides:
+- **Install** - Install OpenVPN Admin Panel
+- **Update** - Update to the latest version (with auto-backup)
+- **Uninstall** - Remove the admin panel completely
+- **Restart** - Restart the admin panel service
+- **Status** - View service status
+- **Logs** - View recent logs
+- **Credentials** - Show admin login credentials
+- **Reinstall** - Complete reinstall (uninstall + install)
+
+## 🔄 Updating
+
+### Via Management Menu (Recommended)
+```bash
+sudo bash manage.sh
+# Select option 2 for Update
+```
 
 ### Automatic Update
 
@@ -113,7 +147,31 @@ source venv/bin/activate
 pip install -r requirements.txt
 sudo systemctl restart openvpn-admin
 ```
+## 🗑️ Uninstalling
 
+### Via Management Menu (Recommended)
+```bash
+sudo bash manage.sh
+# Select option 3 for Uninstall
+```
+
+### Direct Uninstall
+```bash
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/uninstall.sh | sudo bash
+```
+
+Or if you cloned the repository:
+```bash
+sudo bash uninstall.sh
+```
+
+The uninstaller will remove:
+- Admin panel directory (`/opt/openvpn-admin`)
+- Service file (`openvpn-admin.service`)
+- Credentials file
+- Log files
+
+**Note:** OpenVPN server and its configuration will NOT be removed. To remove OpenVPN server, use the OpenVPN uninstaller separately.
 ## �🔧 Manual Installation
 
 If you prefer manual installation:
