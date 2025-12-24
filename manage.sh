@@ -136,7 +136,7 @@ uninstall_panel() {
 
 reinstall_panel() {
     echo -e "${YELLOW}This will completely remove and reinstall the admin panel.${NC}"
-    read -p "Continue? (yes/no): " -r
+    read -r -p "Continue? (yes/no): " REPLY < /dev/tty
     echo
     if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
         echo -e "${YELLOW}Reinstall cancelled.${NC}"
@@ -153,7 +153,7 @@ reinstall_panel() {
 # Main loop
 while true; do
     show_menu
-    read -p "Please select an option [1-9]: " choice
+    read -r -p "Please select an option [1-9]: " choice < /dev/tty
     echo ""
     
     case $choice in
@@ -191,5 +191,5 @@ while true; do
     esac
     
     echo ""
-    read -p "Press Enter to continue..."
+    read -r -p "Press Enter to continue..." < /dev/tty
 done
