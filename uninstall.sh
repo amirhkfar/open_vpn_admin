@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# OpenVPN Admin Panel - Uninstaller
-# Usage: bash uninstall.sh
+# OpenVPN Complete Uninstaller
+# Removes both Admin Panel and OpenVPN Server
+# Usage: bash uninstall.sh [--panel-only]
 
 set -e
 
@@ -13,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${RED}=====================================${NC}"
-echo -e "${RED}OpenVPN Admin Panel Uninstaller${NC}"
+echo -e "${RED}OpenVPN Complete Uninstaller${NC}"
 echo -e "${RED}=====================================${NC}"
 echo ""
 
@@ -23,13 +24,27 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-echo -e "${YELLOW}This will remove:${NC}"
-echo -e "  - OpenVPN Admin Panel (/opt/openvpn-admin)"
-echo -e "  - Admin panel service (openvpn-admin.service)"
-echo -e "  - Admin panel data and logs"
-echo ""
-echo -e "${RED}WARNING: This will NOT remove OpenVPN server or its configuration!${NC}"
-echo -e "${YELLOW}To also remove OpenVPN server, run the OpenVPN uninstaller separately.${NC}"
+PANEL_ONLY=false
+if [[ "$1" == "--panel-only" ]]; then
+    PANEL_ONLY=true
+fi
+
+if [ "$PANEL_ONLY" = true ]; then
+    echo -e "${YELLOW}This will remove:${NC}"
+    echo -e "  - OpenVPN Admin Panel only"
+    echo ""
+    echo -e "${GREEN}OpenVPN server and client configs will be preserved.${NC}"
+else
+    echo -e "${YELLOW}This will remove:${NC}"
+    echo -e "  - OpenVPN Admin Panel (/opt/openvpn-admin)"
+    echo -e "  - OpenVPN Server (/etc/openvpn)"
+    echo -e "  - All client configurations"
+    echo -e "  - All certificates and keys"
+    echo -e "  - Firewall rules"
+    echo ""
+    echo -e "${RED}WARNING: This is a COMPLETE removal!${NC}"
+    echo -e "${RED}All VPN clients will stop working!${NC}"
+fi
 echo ""
 
 read -r -p "Are you sure you want to uninstall? (yes/no): " REPLY
@@ -39,6 +54,7 @@ if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
     exit 0
 fi
 
+# Uninstall Admin Panel
 echo -e "${BLUE}Stopping OpenVPN Admin Panel service...${NC}"
 if systemctl is-active --quiet openvpn-admin; then
     systemctl stop openvpn-admin
@@ -70,10 +86,38 @@ if [ -f /root/.openvpn-admin-credentials ]; then
     echo -e "${GREEN}✓ Credentials file removed${NC}"
 fi
 
-echo -e "${BLUE}Removing logs...${NC}"
-if [ -d /var/log/openvpn-admin ]; then
-    rm -rf /var/log/openvpn-admin
+# Uninstall OpenVPN Server if not panel-only
+if [ "$PANEL_ONLY" = false ]; then
+    echo ""
+    echo -e "${BLUE}Stopping OpenVPN server...${NC}"
+    if systemctl is-active --quiet openvpn@server; then
+        systemctl stop openvpn@server
+        echo -e "${GREEN}✓ OpenVPN server stopped${NC}"
+    fi
+    
+    echo -e "${BLUE}Disabling OpenVPN server...${NC}"
+    if systemctl is-enabled --quiet openvpn@server 2>/dev/null; then
+        systemctl disable openvpn@server
+        echo -e "${GREEN}✓ OpenVPN server disabled${NC}"
+    fi
+    
+    echo -e "${BLUE}Removing OpenVPN configuration and certificates...${NC}"
+    if [ -d /etc/openvpn ]; then
+        rm -rf /etc/openvpn
+        echo -e "${GREEN}✓ OpenVPN directory removed${NC}"
+    fi
+    
+    echo -e "${BLUE}Removing OpenVPN logs...${NC}"
+    rm -f /var/log/openvpn*.log
     echo -e "${GREEN}✓ Logs removed${NC}"
+    
+    echo -e "${BLUE}Removing firewall rules...${NC}"
+    # Remove iptables rules
+    IFACE=$(ip route | grep default | awk '{print $5}' 2>/dev/null || echo "eth0")
+    iptables -t nat -D POSTROUTING -s 10.8.0.0/24 -o $IFACE -j MASQUERADE 2>/dev/null || true
+    iptables -D FORWARD -i tun0 -j ACCEPT 2>/dev/null || true
+    iptables -D FORWARD -o tun0 -j ACCEPT 2>/dev/null || true
+    echo -e "${GREEN}✓ Firewall rules removed${NC}"
 fi
 
 echo ""
@@ -81,6 +125,10 @@ echo -e "${GREEN}=====================================${NC}"
 echo -e "${GREEN}Uninstall Complete!${NC}"
 echo -e "${GREEN}=====================================${NC}"
 echo ""
-echo -e "${YELLOW}Note: OpenVPN server and its configuration remain installed.${NC}"
-echo -e "${YELLOW}To remove OpenVPN server, you need to run the OpenVPN uninstaller.${NC}"
+
+if [ "$PANEL_ONLY" = true ]; then
+    echo -e "${GREEN}Admin panel removed. OpenVPN server still running.${NC}"
+else
+    echo -e "${GREEN}OpenVPN server and admin panel completely removed.${NC}"
+fi
 echo ""
