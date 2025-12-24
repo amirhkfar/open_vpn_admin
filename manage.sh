@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# OpenVPN Admin Panel - Management Menu
-# Usage: bash manage.sh
+# OpenVPN Admin Panel - Management Script
+# Usage: bash manage.sh [command]
 
 # Colors
 RED='\033[0;31m'
@@ -19,17 +19,33 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Check if stdin is a terminal (not piped from curl)
-if [ ! -t 0 ]; then
-    echo -e "${YELLOW}Detected non-interactive mode (piped from curl).${NC}"
-    echo -e "${YELLOW}Downloading script for interactive use...${NC}"
-    TEMP_SCRIPT="/tmp/openvpn-manage-$$.sh"
-    curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh -o "$TEMP_SCRIPT"
-    chmod +x "$TEMP_SCRIPT"
-    echo -e "${GREEN}Starting interactive menu...${NC}"
-    exec bash "$TEMP_SCRIPT" "$@"
-    exit 0
-fi
+# Show usage
+show_usage() {
+    echo -e "${CYAN}=====================================${NC}"
+    echo -e "${CYAN}   OpenVPN Admin Panel Manager${NC}"
+    echo -e "${CYAN}=====================================${NC}"
+    echo ""
+    echo -e "${YELLOW}Usage:${NC}"
+    echo -e "  bash manage.sh [command]"
+    echo ""
+    echo -e "${YELLOW}Commands:${NC}"
+    echo -e "  ${GREEN}install${NC}      - Install OpenVPN Admin Panel"
+    echo -e "  ${GREEN}update${NC}       - Update Admin Panel"
+    echo -e "  ${GREEN}uninstall${NC}    - Uninstall Admin Panel"
+    echo -e "  ${GREEN}restart${NC}      - Restart Service"
+    echo -e "  ${GREEN}status${NC}       - View Status"
+    echo -e "  ${GREEN}logs${NC}         - View Logs"
+    echo -e "  ${GREEN}credentials${NC}  - Show Admin Credentials"
+    echo -e "  ${GREEN}reinstall${NC}    - Complete Reinstall"
+    echo -e "  ${GREEN}menu${NC}         - Interactive Menu (local use only)"
+    echo ""
+    echo -e "${YELLOW}Examples:${NC}"
+    echo -e "  bash manage.sh install"
+    echo -e "  bash manage.sh status"
+    echo -e "  bash manage.sh credentials"
+    echo ""
+    echo -e "${CYAN}=====================================${NC}"
+}
 
 show_menu() {
     clear
@@ -162,46 +178,86 @@ reinstall_panel() {
     install_panel
 }
 
-# Main loop
-while true; do
-    show_menu
-    read -r -p "Please select an option [1-9]: " choice
-    echo ""
-    
-    case $choice in
-        1)
-            install_panel
-            ;;
-        2)
-            update_panel
-            ;;
-        3)
-            uninstall_panel
-            ;;
-        4)
-            restart_service
-            ;;
-        5)
-            show_status
-            ;;
-        6)
-            show_logs
-            ;;
-        7)
-            show_credentials
-            ;;
-        8)
-            reinstall_panel
-            ;;
-        9)
-            echo -e "${GREEN}Goodbye!${NC}"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid option. Please try again.${NC}"
-            ;;
-    esac
-    
-    echo ""
-    read -r -p "Press Enter to continue..."
-done
+# Handle command line arguments
+COMMAND="${1:-}"
+
+case "$COMMAND" in
+    install)
+        install_panel
+        ;;
+    update)
+        update_panel
+        ;;
+    uninstall)
+        uninstall_panel
+        ;;
+    restart)
+        restart_service
+        ;;
+    status)
+        show_status
+        ;;
+    logs)
+        show_logs
+        ;;
+    credentials|creds)
+        show_credentials
+        ;;
+    reinstall)
+        reinstall_panel
+        ;;
+    menu)
+        # Interactive menu mode
+        while true; do
+            show_menu
+            read -r -p "Please select an option [1-9]: " choice
+            echo ""
+            
+            case $choice in
+                1)
+                    install_panel
+                    ;;
+                2)
+                    update_panel
+                    ;;
+                3)
+                    uninstall_panel
+                    ;;
+                4)
+                    restart_service
+                    ;;
+                5)
+                    show_status
+                    ;;
+                6)
+                    show_logs
+                    ;;
+                7)
+                    show_credentials
+                    ;;
+                8)
+                    reinstall_panel
+                    ;;
+                9)
+                    echo -e "${GREEN}Goodbye!${NC}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "${RED}Invalid option. Please try again.${NC}"
+                    ;;
+            esac
+            
+            echo ""
+            read -r -p "Press Enter to continue..."
+        done
+        ;;
+    ""| help|--help|-h)
+        show_usage
+        ;;
+    *)
+        echo -e "${RED}Unknown command: $COMMAND${NC}"
+        echo ""
+        show_usage
+        exit 1
+        ;;
+esac

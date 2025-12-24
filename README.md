@@ -91,38 +91,68 @@ sudo cat /root/.openvpn-admin-credentials
 
 ## 🛠️ Management
 
-### Interactive Management Menu
+### Quick Commands
 
-Use the management script for easy control:
+Use the management script with direct commands:
 
 ```bash
+# Show help
 curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash
+
+# Install
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s install
+
+# Show credentials
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s credentials
+
+# Update
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s update
+
+# Restart service
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s restart
+
+# View status
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s status
 ```
 
-Or if you cloned the repository:
+### Local Management
+
+If you cloned the repository:
 ```bash
-sudo bash manage.sh
+# Interactive menu
+sudo bash manage.sh menu
+
+# Or use direct commands
+sudo bash manage.sh install
+sudo bash manage.sh credentials
+sudo bash manage.sh status
+sudo bash manage.sh update
 ```
 
-The management menu provides:
-- **Install** - Install OpenVPN Admin Panel
-- **Update** - Update to the latest version (with auto-backup)
-- **Uninstall** - Remove the admin panel completely
-- **Restart** - Restart the admin panel service
-- **Status** - View service status
-- **Logs** - View recent logs
-- **Credentials** - Show admin login credentials
-- **Reinstall** - Complete reinstall (uninstall + install)
+### Available Commands
+- **install** - Install OpenVPN Admin Panel
+- **update** - Update to the latest version (with auto-backup)
+- **uninstall** - Remove the admin panel completely
+- **restart** - Restart the admin panel service
+- **status** - View service status
+- **logs** - View recent logs
+- **credentials** - Show admin login credentials
+- **reinstall** - Complete reinstall (uninstall + install)
+- **menu** - Interactive menu (for local use)
 
 ## 🔄 Updating
 
-### Via Management Menu (Recommended)
+### Quick Update
 ```bash
-sudo bash manage.sh
-# Select option 2 for Update
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s update
 ```
 
-### Automatic Update
+### Via Local Script
+```bash
+sudo bash manage.sh update
+# OR
+sudo /opt/openvpn-admin/update.sh
+```
 
 Check for updates and install automatically:
 
@@ -149,13 +179,12 @@ sudo systemctl restart openvpn-admin
 ```
 ## 🗑️ Uninstalling
 
-### Via Management Menu (Recommended)
+### Quick Uninstall
 ```bash
-sudo bash manage.sh
-# Select option 3 for Uninstall
+curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/manage.sh | sudo bash -s uninstall
 ```
 
-### Direct Uninstall
+### Direct Uninstall Script
 ```bash
 curl -sL https://raw.githubusercontent.com/amirhkfar/open_vpn_admin/main/uninstall.sh | sudo bash
 ```
